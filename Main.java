@@ -120,9 +120,14 @@ public class Main
 			this.neg = _neg;
 		}
 		
+		/**
+		 * Method to output a domino in the format 
+		 * {Positive x Positive y Negative x Negative y}
+		 */
 		public String toString()
 		{
-			return this.pos + " " + this.neg;
+			return this.pos.x + " " + this.pos.y + " "
+				  + this.neg.x + " " + this.neg.y;
 		}
 	}
 
@@ -148,14 +153,12 @@ public class Main
 	/**
 	 * Method to write the results of countRecustions to an
 	 * output file
-	 * @param ezDivNums = easily divisible numbers
-	 * @param scores = the scores to write to the file
+	 * @param dominos = the list of dominos to output
 	 */
-	public static void writeOutput(List<Integer> ezDivNums, Integer[] scores)
+	public static void writeOutput(String outputName, List<Domino> dominos)
 	{
-		File outFile = new File("output.txt");
+		File outFile = new File(outputName);
 		PrintWriter writer = null;
-		int index = 0;
 
 		try
 		{
@@ -163,10 +166,9 @@ public class Main
 
 			// print out the "easily divisible nums" and their scores 
 			// separated by a space
-			for (Integer Int : ezDivNums)
+			for (Domino domino : dominos)
 			{
-				writer.print(Int + " " + scores[index] + "\n");
-				index++;
+				writer.print(domino + "\n");
 			}
 
 
@@ -785,15 +787,10 @@ public class Main
 	{
 		boardNMagnets bnm = readInput("inputTest.txt");
 		List<Point> spaces = placeMagnets(bnm.board, bnm.magnets);
-
-		System.out.print("\n\n" + new myPoint(0,0).compareTo(new Point(1,0)));
 		
 		List<Domino> dominos = createDominos(bnm.board, bnm.magnets, spaces);
 
-		System.out.print("\n\n");
-		printBoard(bnm.board);
-		System.out.print("NIGGA WE MADE IT!!!!");
-		//writeOutput()
+		writeOutput("output.txt", dominos);
 
 
 	}
