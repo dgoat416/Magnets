@@ -22,7 +22,7 @@ public class Main
 	 * @author DGOAT
 	 *
 	 */
-	public static class MagnetLoc
+	public static class Domino
 	{
 		// location of positive side of magnet
 		public Point pos;
@@ -31,10 +31,10 @@ public class Main
 		public Point neg;
 
 		// Default Constructor
-		public MagnetLoc()
+		public Domino(Point _pos, Point _neg)
 		{
-			pos = new Point(0,0);
-			neg = new Point(0,0);
+			this.pos = _pos;
+			this.neg = _neg;
 		}
 	}
 
@@ -56,6 +56,7 @@ public class Main
 			magnets = m;
 		}
 	}
+	
 	/**
 	 * Method to write the results of countRecustions to an
 	 * output file
@@ -104,7 +105,7 @@ public class Main
 	public static boardNMagnets readInput()
 	{
 		// Read input from file
-		File inFile = new File("inputTest.txt");
+		File inFile = new File("input.txt");
 		Scanner scan = null;
 
 		// necessary variables to store input 
@@ -142,10 +143,8 @@ public class Main
 	 * Method to place the magnets in their proper place
 	 * @param board = 2d array representing the board
 	 * @param magnets = number of magnets we need to put on the board
-	 * @return
-	 * 				= list of MagnetLoc objects representing the places we placed the magnets
 	 */
-	public static List<MagnetLoc> placeMagnets(char[][] board, int magnets)
+	public static void placeMagnets(char[][] board, int magnets)
 	{
 
 		// draw it out first so that I can picture this better
@@ -220,11 +219,10 @@ public class Main
 				System.out.print(board[i][b] + " ");
 		}
 		
-		
-		if (spaces != requiredSpaces)
-			System.out.print("Fix this edge case");
+//		
+//		if (spaces != requiredSpaces)
+//			System.out.print("Fix this edge case");
 
-		return null;
 
 	}
 
@@ -528,15 +526,47 @@ public class Main
 		return freeSpace;
 	}
 
+	
+	/**
+	 * Method to group the dominos in the format needed to output
+	 * @param board = 2d array representing the board to place magnets on
+	 * @param magnets = the number of magnets to put on the board
+	 * @return
+	 * 				= a list of dominos
+	 */
+	public static List<Domino> createDominos(char[][] board, int magnets)
+	{
+		List<Domino> dominos = new ArrayList<Domino>();
+		Domino dom = null;
+	
+		while (dominos.size() < magnets)
+		{
+			// grab a positive, then grab an adjacent negative
+			// (we can use isCompatible or redefine free spaces type logic to find spaces
+			// that will actually work)
+			// once we have both positive and negative create a domino object
+			// and insert into dominos
+			// CURRENTLY HERE
+			
+			
+		}
+		
+		
+		
+		
+		
+		return dominos;
+	}
+	
 	public static void main(String[] args)
 	{
 		boardNMagnets bnm = readInput();
 		placeMagnets(bnm.board, bnm.magnets);
+		
+		List<Domino> dominos = createDominos(bnm.board, bnm.magnets);
+		
+		//writeOutput()
 
-		System.out.print("HI");
-
-		// CURRENTLY NEED TO WORK ON RECURSION LOGIC FOR 
-		// METHOD REDEFINE_FREE_SPACES
 
 	}
 
