@@ -1,10 +1,8 @@
-// Deron Washington II
 import java.awt.Point;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
@@ -16,8 +14,17 @@ import java.util.Vector;
  * Class that houses the solution to CECS 328 Project 3 Magnets
  * @author DGOAT
  * Date Started: 10/11/2020
- * Last Edit: 10/11/2020
- * Date Finished: 
+ * Last Edit: 10/20/2020
+ * Date Finished: 10/20/2020
+ * RESULT: 4/4 (100%)
+ * 
+ * Improvements to be made: 
+ *  - fix redefineFreeSpaces to detect the character to place at a free space
+ *    to allow the board to be maximally populated
+ *  - try another algorithm which gets the home spaces, zig zags through to
+ *    determine where magnets are placed and places magnets down as you go through it
+ *   - document the time/space complexity
+ *    
  */
 public class Main 
 {
@@ -30,9 +37,11 @@ public class Main
 	public static class myPoint extends Point implements Comparable<Point>
 	{
 		/**
-		 * 
+		 * Serial Version UID because we extended Point and Point is serializable
 		 */
 		private static final long serialVersionUID = 3504962621239841892L;
+
+		// coordinate x will be vertical and y will be horizontal in board
 		public Point iPoint;
 
 		@Override
@@ -152,8 +161,9 @@ public class Main
 	}
 
 	/**
-	 * Method to write the results of countRecustions to an
+	 * Method to write the results of creating the dominos to an
 	 * output file
+	 * @param outputName = the name of the output file (with the extension)
 	 * @param dominos = the list of dominos to output
 	 */
 	public static void writeOutput(String outputName, List<Domino> dominos)
@@ -165,12 +175,9 @@ public class Main
 		{
 			writer = new PrintWriter(outFile);
 
-			// print out the "easily divisible nums" and their scores 
-			// separated by a space
+			// print out the dominos
 			for (Domino domino : dominos)
-			{
 				writer.print(domino + "\n");
-			}
 
 
 		} catch (FileNotFoundException e)
@@ -204,7 +211,9 @@ public class Main
 	 * a char array that models the board where the
 	 * magnets will reside
 	 * @return
-	 * 				= a character array corresponding to the board
+	 * 				= a boardNMagnets object which contains 
+	 * 					the board and the number of magnets to place
+	 * 					on it
 	 */
 	public static boardNMagnets readInput(String fileName)
 	{
@@ -244,34 +253,28 @@ public class Main
 	}
 
 	/**
+	 * MAIN ALGORITHM
 	 * Method to place the magnets in their proper place
+	 * 
+	 * Algorithm after writing it out:
+	 * 1. Find the next home occurrence (+ or - that is defined from the board's birth)
+	 * 2. Redefine the spaces around the current home occurrence to be compatible
+	 * (we will perform this step cell by cell around the home occurence)
+	 * Ex. if we are at a + then we must make the spaces to the left, right, and 
+	 * directly underneath - unless one of those locations already has a + or -
+	 * occupying it (edge case here)
+	 * 3. Repeat step 2 until we are out of home occurrences that we haven't done this
+	 * for
+	 * 4. Once we are out of home occurrences, if we still don't have at least 2 * M spaces
+	 * that we have defined, then we must do what we did for home occurrences with
+	 * free spaces 
 	 * @param board = 2d array representing the board
 	 * @param magnets = number of magnets we need to put on the board
+	 * @return 
+	 * 				= a list of myPoint objects that need to be used to create dominos from
 	 */
 	public static List<myPoint> placeMagnets(char[][] board, int magnets)
 	{
-
-		// draw it out first so that I can picture this better
-		// and see how I can generalize the algorithm to 
-		// fit all cases 	
-
-		/*
-		 * Algorithm after writing it out:
-		 * 
-		 * 1. Find the next home occurrence (+ or - that is defined from the board's birth)
-		 * 2. Redefine the spaces around the current home occurrence to be compatible
-		 * (we will perform this step cell by cell around the home occurence)
-		 * Ex. if we are at a + then we must make the spaces to the left, right, and 
-		 * directly underneath - unless one of those locations already has a + or -
-		 * occupying it (edge case here)
-		 * 3. Repeat step 2 until we are out of home occurrences that we haven't done this
-		 * for
-		 * 4. Once we are out of home occurrences, if we still don't have at least 2 * M spaces
-		 * that we have defined, then we must do what we did for home occurrences with
-		 * free spaces 
-		 */
-
-
 		// these are the home occurrences where each point holds location to a home occurrence
 		List<myPoint> home = findHomeOccurrences(board);
 
@@ -284,12 +287,9 @@ public class Main
 		// number of spaces required to place the number of magnets down
 		int requiredSpaces = magnets * 2;
 
-		//	while(spaces != requiredSpaces)
-		//{
 		// redefine spaces around current home space to be valid places to place a magnet
 		for (int i = 0; i < home.size(); i++)
 		{
-			//  redefine spaces around current home space
 
 			// gives us the coordinate of current home space
 			myPoint currHome = home.get(i);
@@ -300,7 +300,7 @@ public class Main
 			// get the char value to redefine the area around home to be
 			char redefine = board[currHome.x][currHome.y] == '+' ? '-' : '+';
 
-			// redefine spaces around home space
+			// redefine spaces around home space 
 			temp = redefineAreaAroundHomeSpace(board, home.get(i), redefine);
 			spaces += temp.size();
 			additionalSpaces.addAll(temp);
@@ -315,7 +315,6 @@ public class Main
 		// these are the free space occurrences where each point holds location to a free space occurrence
 		List<myPoint> freeSpace = findFreeSpaceOccurrences(board);
 		int j = 0;
-		int additionalSpace = 0;
 
 		while (spaces < requiredSpaces && j < freeSpace.size())
 		{
@@ -325,7 +324,7 @@ public class Main
 			// list to hold all the temporary spaces that have been added
 			Set<myPoint> temp = null;
 
-			// can I define this space to be non free? (return 1 if yes and 0 if no)
+			// can I define this space to be non free?
 			temp = redefineFreeSpaces(board, currFree);
 			spaces += temp.size();
 			j++;
@@ -337,17 +336,12 @@ public class Main
 		}
 
 		// get an initial view of what the board looks like
-//		printBoard(board);
+		//		printBoard(board);
 
 		// add all changed points to the home list 
 		home.addAll(additionalSpaces);
 
 		return home;
-		//		
-		//		if (spaces != requiredSpaces)
-		//			System.out.print("Fix this edge case");
-
-
 	}
 
 	/**
@@ -361,45 +355,22 @@ public class Main
 	 * 				= the number of spaces added to place magnets on (spaces successfully changed)
 	 */
 	public static List<myPoint> redefineAreaAroundHomeSpace(char[][] board, myPoint coordinate, char redefine)
-	{		
-		//		// base case (redefine 0 points)
-		//		if (board[coordinate.x][coordinate.y] == redefine )
-		//		{
-		//			return 0;
-		//		}
-		//
-		//		// base case 2 (redefine 1 point)
-		//		else if (board[coordinate.x][coordinate.y] == '*')
-		//		{
-		//			board[coordinate.x][coordinate.y] = redefine;
-		//			return 1;
-		//		}
-
-		int score = 0;
+	{	
+		// list of myPoint objects that have been redefined on the board
 		List<myPoint> redefinedSpace = new Vector<myPoint>();
-		// determine if you will need to redefine 2 or 3 points
-
-		// coordinate x will be vertical and y will be horizontal in board
-		// define 3 points
-		// if we are not at 0 and not at board.length - 1 (last space)
-
-		// if we are anywhere in the first row(x == 0) and not at the first column (y > 0)
-		// we will have 3 points to define
-
-
 
 		// redefine location to the left of coordinate
 		if (coordinate.y > 0)
 		{
+			// save current value
 			char temp = board[coordinate.x][coordinate.y - 1];
 
 			if (board[coordinate.x][coordinate.y - 1] == '*')
 			{
-				//board[coordinate.x][coordinate.y - 1] = redefine;
 
-				// determine if the redefinition is compatible with the current board
-				// if it is then we are good and add the score 
-				// if it isn't then reassign current spot to old value
+				/* determine if the redefinition is compatible with the current board
+					-/ if it is then we are goo so add to redefinedSpace list 
+					-  if it isn't then reassign current spot to old value */
 				if(isCompatible(board, new myPoint(coordinate.x, coordinate.y - 1), redefine))
 					redefinedSpace.add(new myPoint(coordinate.x, coordinate.y - 1));
 				else
@@ -415,11 +386,9 @@ public class Main
 
 			if(board[coordinate.x][coordinate.y + 1] == '*')
 			{
-				//board[coordinate.x][coordinate.y + 1] = redefine;
-
-				// determine if the redefinition is compatible with the current board
-				// if it is then we are good and add the score 
-				// if it isn't then reassign current spot to old value
+				/* determine if the redefinition is compatible with the current board
+						- if it is then we are good so add to redefinedSpace list
+						- if it isn't then reassign current spot to old value				*/
 				if(isCompatible(board, new myPoint(coordinate.x, coordinate.y + 1), redefine))
 					redefinedSpace.add(new myPoint(coordinate.x, coordinate.y + 1));
 				else
@@ -434,11 +403,9 @@ public class Main
 
 			if(board[0][coordinate.y] == '*')
 			{
-				//board[0][coordinate.y] = redefine;
-
-				// determine if the redefinition is compatible with the current board
-				// if it is then we are good and add the score 
-				// if it isn't then reassign current spot to old value
+				/* determine if the redefinition is compatible with the current board
+						- if it is then we are good so add to redefinedSpace list
+						- if it isn't then reassign current spot to old value				*/
 				if(isCompatible(board, new myPoint(0, coordinate.y), redefine))
 					redefinedSpace.add(new myPoint(0, coordinate.y));
 				else
@@ -452,11 +419,9 @@ public class Main
 
 			if(board[1][coordinate.y] == '*')
 			{
-				//board[1][coordinate.y] = redefine;
-
-				// determine if the redefinition is compatible with the current board
-				// if it is then we are good and add the score 
-				// if it isn't then reassign current spot to old value
+				/* determine if the redefinition is compatible with the current board
+						- if it is then we are good so add to redefinedSpace list
+						- if it isn't then reassign current spot to old value				*/
 				if(isCompatible(board, new myPoint(1, coordinate.y), redefine))
 					redefinedSpace.add(new myPoint(1, coordinate.y));
 				else
@@ -477,15 +442,7 @@ public class Main
 	 */
 	public static Set<myPoint> redefineFreeSpaces(char[][] board, myPoint coordinate)
 	{
-		//int score = 0;
-		// determine if you will need to redefine 2 or 3 points
-
-		// coordinate x will be vertical and y will be horizontal in board
-		// define 3 points
-		// if we are not at 0 and not at board.length - 1 (last space)
-
-		// if we are anywhere in the first row(x == 0) and not at the first column (y > 0)
-		// we will have 3 points to define
+		// grab all the elements around coordinate
 		List<Character> directions = new Vector<Character>();
 
 		// this is what we will return to indicate how many spaces we have successfully redefined
@@ -493,8 +450,7 @@ public class Main
 
 		// temp list to store the free spaces around coordinate
 		Set<myPoint> treeSet = new TreeSet<myPoint>();
-
-		//char left, right, up, down;
+		;
 		// redefine location to the left of coordinate
 		if (coordinate.y > 0)
 		{
@@ -535,8 +491,7 @@ public class Main
 			if(board[1][coordinate.y] == '*')
 				treeSet.add(new myPoint(1, coordinate.y));
 		}
-
-		//char[] directions = {left, right, up, down};
+		;
 		char c = '*';
 		boolean found = false;
 		for (int i = 0; i < directions.size(); i++)
@@ -583,10 +538,9 @@ public class Main
 			// since the character can be '+' or '-' let's test to see which one works
 			for (int i = 0; i < 2; i++)
 			{
-				//board[coordinate.x][coordinate.y] = redefine[i];
-				// determine if the redefinition is compatible with the current board
-				// if it is then we are good and add the score 
-				// if it isn't then reassign current spot to old value
+				/* determine if the redefinition is compatible with the current board
+						- if it is then we are good so add to redefinedSpace list
+						- if it isn't then reassign current spot to old value				*/
 				if(isCompatible(board, new myPoint(coordinate.x, coordinate.y), redefine[i]))
 				{
 					redefinedSpaces.add(new myPoint(coordinate.x, coordinate.y));
@@ -604,12 +558,9 @@ public class Main
 				// since the character can be '+' or '-' let's test to see which one works
 				for (int i = 0; i < 2; i++)
 				{
-					//					temp = board[p.x][p.y];
-					//	board[coordinate.x][coordinate.y] = '-';
-
-					// determine if the redefinition is compatible with the current board
-					// if it is then we are good and add the score 
-					// if it isn't then reassign current spot to old value
+					/* determine if the redefinition is compatible with the current board
+						- if it is then we are good so add to redefinedSpace list
+						- if it isn't then reassign current spot to old value				*/
 					if(isCompatible(board, new myPoint(p.x, p.y), redefine[i]))
 					{
 						redefinedSpaces.add(new myPoint(p.x, p.y));
@@ -619,9 +570,9 @@ public class Main
 						board[p.x][p.y] = temp;
 
 				}
+
+
 			}
-
-
 		}
 
 		else 
@@ -629,11 +580,6 @@ public class Main
 			board[coordinate.x][coordinate.y] = c == '-' ? '+' : '-';
 			redefinedSpaces.add(new myPoint(coordinate.x, coordinate.y));
 		}
-
-
-		// get all the locations around coordinate, that are also a '*' grab the first one and change it's value
-		// to a compatible one
-
 
 		return redefinedSpaces;
 	}
@@ -644,7 +590,7 @@ public class Main
 	 * @param board = 2 dimensional character array representing the board
 	 * @param coordinate = a point that represents the current point we are at
 	 * 									  in the board
-	 * @param define = the character to redefine board with
+	 * @param redefine = the character to redefine board with
 	 * @return
 	 * 				= true if the redefinition is compatible
 	 * 				= false otherwise
@@ -660,8 +606,6 @@ public class Main
 			if (board[coordinate.x][coordinate.y - 1] == current)
 				return false;
 		}
-
-		//redefineAreaAroundHomeSpace(board, new Point(coordinate.x, coordinate.y - 1), redefine);
 
 		// redefine location to the right of coordinate
 		if (coordinate.y < board[0].length - 1)
@@ -691,7 +635,9 @@ public class Main
 	 * Method to find an adjacent compatible space on the board
 	 * @param  board = 2 dimensional character array representing the board
 	 * @param coordinate = a point that represents the current point we are at
-	 * 									  in the board
+	 * 									  in the boar
+	 * @param populated = 2d array where true represents an index where a domino lies
+	 * 									and a false means domino doesn't exist thered
 	 * @return
 	 * 				= a point object that is adjacent to coordinate and compatible with
 	 * 				   coordinate
@@ -700,37 +646,34 @@ public class Main
 	{
 		char compatible = board[coordinate.x][coordinate.y] == '+' ? '-' : '+';
 
-		
+
 
 		// return the first compatible, adjacent value we find based on priority
 		// bottom -> top -> right -> left
-		
-		// bottom
+
+		//check adjacent location directly below
 		if (coordinate.x == 0 && (board[1][coordinate.y] == compatible
 				|| isFreeSpaceUsable(board, new myPoint (1, coordinate.y))))
-					if (populated[1][coordinate.y] == false)
-							return new myPoint (1, coordinate.y);
-		
-		// top 
+			if (populated[1][coordinate.y] == false)
+				return new myPoint (1, coordinate.y);
+
+		//check adjacent location directly on top 
 		if (coordinate.x == 1 && (board[0][coordinate.y] == compatible
 				|| isFreeSpaceUsable(board, new myPoint (0, coordinate.y))))
-					if (populated[0][coordinate.y] == false)
-							return new myPoint (0, coordinate.y);
-		
-		// right
+			if (populated[0][coordinate.y] == false)
+				return new myPoint (0, coordinate.y);
+
+		//check adjacent location to the  right
 		if (coordinate.y < board[0].length - 1 && (board[coordinate.x][coordinate.y + 1] == compatible
 				|| isFreeSpaceUsable(board, new myPoint(coordinate.x, coordinate.y + 1))))
-					if (populated[coordinate.x][coordinate.y + 1] == false)
-							return new myPoint(coordinate.x,coordinate.y + 1);
-		
-		// left
+			if (populated[coordinate.x][coordinate.y + 1] == false)
+				return new myPoint(coordinate.x,coordinate.y + 1);
+
+		//check adjacent location to the  left
 		if (coordinate.y > 0 && (board[coordinate.x][coordinate.y - 1] == compatible
 				|| isFreeSpaceUsable(board, new myPoint(coordinate.x, coordinate.y - 1))))
-					 if (populated[coordinate.x][coordinate.y - 1] == false)
-						 	return new myPoint(coordinate.x, coordinate.y - 1);
-
-		
-
+			if (populated[coordinate.x][coordinate.y - 1] == false)
+				return new myPoint(coordinate.x, coordinate.y - 1);
 
 		return null;		
 	}
@@ -864,21 +807,21 @@ public class Main
 
 			else 
 			{
-			// get the negative side of the domino given an invalid positive side
-			dom.neg = board[tempPoint.x][tempPoint.y] == '-' 
-							? tempPoint
-							: findAdjacent(board, tempPoint, populated);
-			
-			// is dom.neg a valid value
-			if (dom.neg != null)
-			{
-				// get the positive side of the domino given a valid negative side of the domino
-				if(dom.neg.equals(tempPoint))
-					dom.pos = findAdjacent(board, tempPoint, populated);
-				else
-					dom.pos = tempPoint;
-			}
-			
+				// get the negative side of the domino given an invalid positive side
+				dom.neg = board[tempPoint.x][tempPoint.y] == '-' 
+								? tempPoint
+								: findAdjacent(board, tempPoint, populated);
+
+				// is dom.neg a valid value
+				if (dom.neg != null)
+				{
+					// get the positive side of the domino given a valid negative side of the domino
+					if(dom.neg.equals(tempPoint))
+						dom.pos = findAdjacent(board, tempPoint, populated);
+					else
+						dom.pos = tempPoint;
+				}
+
 			}
 
 			// add the new domino if neither side is null
@@ -890,19 +833,19 @@ public class Main
 				dominos.add(dom);
 
 				// change the location on the board (can get rid of after testing)
-//				board[dom.pos.x][dom.pos.y] = placeHolder;
-//				board[dom.neg.x][dom.neg.y] = placeHolder;
-//				populated[dom.pos.x][dom.pos.y] = true;
-//				populated[dom.neg.x][dom.neg.y] = true;
-//				placeHolder++;
-//				System.out.print("\n\n");
-//				printBoard(board);
+				board[dom.pos.x][dom.pos.y] = placeHolder;
+				board[dom.neg.x][dom.neg.y] = placeHolder;
+				populated[dom.pos.x][dom.pos.y] = true;
+				populated[dom.neg.x][dom.neg.y] = true;
+				placeHolder++;
+				System.out.print("\n\n----Stage " + placeHolder + "\nA domino has been added" );
+				printBoard(board);
 			}
 
 			// remove what we just processed
 			if (dom.pos != null)
 				tempSpaces.remove(dom.pos);
-			
+
 			if (dom.neg != null)
 				tempSpaces.remove(dom.neg);
 
@@ -917,110 +860,10 @@ public class Main
 
 		}
 
-		// get the furthest point out (largest y value)
-		Object[] arr = tempSpaces.toArray();
-		myPoint marker = (myPoint) arr[arr.length - 1];
-		arr = null;
-
-		// reset tempSpaces
-		Set<myPoint> rest = new TreeSet<myPoint>();
-
-		// create a data structure of all remaining points 
-		for (myPoint p : tempSpaces)
-		{
-			if (											//p.y <= marker.y 
-					//	&& 
-					(board[p.x][p.y] ==  '-' || board[p.x][p.y] == '+' || board[p.x][p.y] == '*')	) 
-				rest.add(p);
-
-		}
-
-		// reset iterator
-		setItr = rest.iterator();
-
-		while (dominos.size() < magnets)
-		{
-			// grab a positive, then grab an adjacent negative
-			// (we can use isCompatible or redefine free spaces type logic to find spaces
-			// that will actually work)
-			// once we have both positive and negative create a domino object
-			// and insert into dominos
-			//System.out.print("Sorry son you failed!!!");
-			// we can speed this up by creating a full list of points in the placeMagnets
-			// method to complete do the same as we did for the second loop with the first
-			// except we must change the return type of the redefineAreaAroundFreeSpaces
-			// method to support all points changed (spaces will increase by the size of the point list)
-
-			//	findAdjacent
-
-			while (setItr.hasNext())
-			{
-				tempPoint = setItr.next();
-				char c  = '\0';
-
-				// is the free space compatible
-				if (isCompatible(board, tempPoint, '+'))
-					c = '+';
-				else if (isCompatible(board, tempPoint, '-'))
-					c = '-';
-				else 
-				{
-					board[tempPoint.x][tempPoint.y] = '*';
-					continue;
-				}
-
-				// get the positive side of the domino
-				dom.pos = tempPoint; // board[tempPoint.x][tempPoint.y] == c
-				//						? tempPoint
-				//								: findAdjacent(board, tempPoint, populated);
-
-				// get the positive side of the domino
-				if (dom.pos == null)
-					continue;
-
-				// get the negative side of the domino	
-				if(dom.pos.equals(tempPoint))
-					dom.neg = findAdjacent(board, tempPoint, populated);
-
-				else
-					dom.neg = tempPoint;
-
-				// add the new domino if neither side is null
-				if (dom.neg != null && dom.pos != null
-						&& populated[dom.neg.x][dom.neg.y] == false
-						&& populated[dom.pos.x][dom.pos.y] == false)
-				{
-					// add new domino to the list of dominos
-					dominos.add(dom);
-
-					// change the location on the board (can get rid of after testing)
-					board[dom.pos.x][dom.pos.y] = placeHolder;
-					board[dom.neg.x][dom.neg.y] = placeHolder;
-					populated[dom.pos.x][dom.pos.y] = true;
-					populated[dom.neg.x][dom.neg.y] = true;
-					placeHolder++;
-					System.out.print("\n\n");
-					printBoard(board);
-				}
-
-				// reset domino 
-				dom = new Domino();
-
-
-				// remove element I just processed
-				tempSpaces.remove(dom.pos);
-				tempSpaces.remove(dom.neg);
-
-				// reset iterator
-				setItr = tempSpaces.iterator();
-
-				if (dominos.size() >= magnets)
-					break;
-
-			}
-
-
-		}
+		// if it gets here there is an error in how many magnets you placed on the board (can't put that many)
+		if (dominos.size() < magnets)
+			System.out.print("Based off the configuration of the board, you can"
+					+ " only place down " + dominos.size() + " magnets");
 
 		return dominos;
 	}
@@ -1028,17 +871,22 @@ public class Main
 	public static void main(String[] args)
 	{
 		boardNMagnets bnm = readInput("input.txt");
+		
+		System.out.print("\n\n-----Starting Board----");
+		printBoard(bnm.board);
+		
 		List<myPoint> spaces = placeMagnets(bnm.board, bnm.magnets);
+
+		System.out.print("\n\n-----Board after determining possible spots for magnets ----");
+		printBoard(bnm.board);
 
 		List<Domino> dominos = createDominos(bnm.board, bnm.magnets, spaces);
 
 		writeOutput("output.txt", dominos);
-		
-		System.out.print("\n\n");
+
+		System.out.print("\n\n-----Finished Board");
 		printBoard(bnm.board);
 
-
-		//HashMap<myPoint, Character> hm = new HashMap<myPoint, Character>();
 	}
 
 }
